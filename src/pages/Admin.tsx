@@ -352,6 +352,17 @@ const Admin = () => {
                 Přidat produkt
               </Button>
             )}
+            {activeTab === "users" && isAdmin && (
+              <Button
+                asChild
+                className="bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-sm"
+              >
+                <Link to="/register">
+                  <Plus className="h-5 w-5 mr-2" />
+                  Přidat uživatele
+                </Link>
+              </Button>
+            )}
           </div>
         </div>
       </header>
