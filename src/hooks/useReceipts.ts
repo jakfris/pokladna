@@ -3,8 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { PaymentType } from "@/types/pos";
 
-const WEBHOOK_URL = "https://hook.eu1.make.celonis.com/u521kd500s1y1956s73kj6wak69xkb4o";
-
 export interface ReceiptItem {
   id: string;
   product_name: string;
@@ -112,36 +110,13 @@ export const useRefundReceipt = () => {
 
       if (updateError) throw updateError;
 
-      // Send webhook with refund transaction type
-      const webhookPayload = {
-        id: receipt.id,
-        items: receipt.items.map((item) => ({
-          product: {
-            name: item.product_name,
-            price: item.product_price,
-          },
-          quantity: item.quantity,
-        })),
-        total: receipt.total,
-        createdAt: receipt.created_at,
-        paymentType: receipt.payment_type,
-        transactionType: "refund" as const,
-        refundedAt: new Date().toISOString(),
-        refundedBy: user.id,
-      };
-
-      if (WEBHOOK_URL) {
-        try {
-          await fetch(WEBHOOK_URL, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(webhookPayload),
-          });
-        } catch (webhookError) {
-          console.warn("Webhook failed, but refund was saved:", webhookError);
-        }
+      // Send webhook via edge function (secure server-side call)
+      try {
+        await supabase.functions.invoke("send-receipt-webhook", {
+          body: { receiptId: receipt.id, transactionType: "refund" },
+        });
+      } catch (webhookError) {
+        console.warn("Webhook failed, but refund was saved:", webhookError);
       }
 
       return receipt.id;

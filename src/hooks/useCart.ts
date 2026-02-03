@@ -4,8 +4,6 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 
-const WEBHOOK_URL = "https://hook.eu1.make.celonis.com/u521kd500s1y1956s73kj6wak69xkb4o";
-
 export const useCart = () => {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -94,19 +92,13 @@ export const useCart = () => {
 
       if (itemsError) throw itemsError;
 
-      // Send to webhook
-      if (WEBHOOK_URL) {
-        try {
-          await fetch(WEBHOOK_URL, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(receipt),
-          });
-        } catch (webhookError) {
-          console.warn("Webhook failed, but receipt was saved:", webhookError);
-        }
+      // Send to webhook via edge function (secure server-side call)
+      try {
+        await supabase.functions.invoke("send-receipt-webhook", {
+          body: { receiptId: savedReceipt.id, transactionType: "prodej" },
+        });
+      } catch (webhookError) {
+        console.warn("Webhook failed, but receipt was saved:", webhookError);
       }
 
       // Invalidate receipts query to refresh history

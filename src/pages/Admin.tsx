@@ -41,12 +41,16 @@ import {
   Package,
   Users,
   Shield,
-  X
+  X,
+  Settings,
+  Link as LinkIcon,
+  Save
 } from "lucide-react";
 import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct } from "@/hooks/useProducts";
 import { useUsers, useUpdateUserProfile, useAddUserRole, useRemoveUserRole } from "@/hooks/useUsers";
 import { useCreateUser } from "@/hooks/useCreateUser";
 import { useAuth, AppRole } from "@/hooks/useAuth";
+import { useSystemSettings, useUpdateSystemSetting } from "@/hooks/useSystemSettings";
 import { Product } from "@/types/product";
 
 const CATEGORIES = ["Nápoje", "Jídlo", "Pečivo", "Dezerty"];
@@ -70,6 +74,7 @@ const Admin = () => {
   const { isAuthenticated, canManageProducts, isAdmin, isLoading: authLoading, user, roles } = useAuth();
   const { data: products, isLoading: productsLoading, error: productsError } = useProducts();
   const { data: users, isLoading: usersLoading } = useUsers();
+  const { data: systemSettings, isLoading: settingsLoading } = useSystemSettings();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
@@ -77,8 +82,21 @@ const Admin = () => {
   const addUserRole = useAddUserRole();
   const removeUserRole = useRemoveUserRole();
   const createUser = useCreateUser();
+  const updateSystemSetting = useUpdateSystemSetting();
 
   const [activeTab, setActiveTab] = useState("products");
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [settingsInitialized, setSettingsInitialized] = useState(false);
+
+  // Initialize webhook URL from settings when data loads
+  if (systemSettings && !settingsInitialized && isAdmin) {
+    const webhookSetting = systemSettings.find((s) => s.key === "webhook_url");
+    if (webhookSetting !== undefined) {
+      setWebhookUrl(webhookSetting.value || "");
+      setSettingsInitialized(true);
+    }
+  }
+
 
   // Product dialogs
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -398,7 +416,7 @@ const Admin = () => {
 
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-lg grid-cols-3">
             <TabsTrigger value="products" className="flex items-center gap-2">
               <Package className="h-4 w-4" />
               Prodejní položky
@@ -406,6 +424,11 @@ const Admin = () => {
             <TabsTrigger value="users" className="flex items-center gap-2" disabled={!isAdmin}>
               <Users className="h-4 w-4" />
               Uživatelé
+              {!isAdmin && <Shield className="h-3 w-3 text-muted-foreground" />}
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="flex items-center gap-2" disabled={!isAdmin}>
+              <Settings className="h-4 w-4" />
+              Nastavení
               {!isAdmin && <Shield className="h-3 w-3 text-muted-foreground" />}
             </TabsTrigger>
           </TabsList>
@@ -585,6 +608,57 @@ const Admin = () => {
                   </Table>
                 </div>
               </>
+            )}
+          </TabsContent>
+
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="space-y-6">
+            {settingsLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="card-elevated p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <LinkIcon className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-foreground">Webhook URL</h3>
+                      <p className="text-sm text-muted-foreground">
+                        URL pro odesílání účtenek do externího systému (např. Make.com, Zapier)
+                      </p>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="webhookUrl">URL adresa</Label>
+                      <Input
+                        id="webhookUrl"
+                        type="url"
+                        value={webhookUrl}
+                        onChange={(e) => setWebhookUrl(e.target.value)}
+                        placeholder="https://hook.example.com/webhook/..."
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Pokud je URL prázdná, účtenky nebudou odesílány na webhook.
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => updateSystemSetting.mutate({ key: "webhook_url", value: webhookUrl })}
+                      disabled={updateSystemSetting.isPending}
+                    >
+                      {updateSystemSetting.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <Save className="h-4 w-4 mr-2" />
+                      )}
+                      Uložit nastavení
+                    </Button>
+                  </div>
+                </div>
+              </div>
             )}
           </TabsContent>
         </Tabs>
