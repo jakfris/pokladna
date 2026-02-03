@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,8 +27,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, Pencil, Trash2, Star, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Star, Loader2, LogIn, ShieldAlert } from "lucide-react";
 import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct } from "@/hooks/useProducts";
+import { useAuth } from "@/hooks/useAuth";
 import { Product, ProductInsert, ProductUpdate } from "@/types/product";
 
 const CATEGORIES = ["Nápoje", "Jídlo", "Pečivo", "Dezerty"];
@@ -36,6 +37,7 @@ const VAT_RATES = [0, 10, 15, 21];
 
 const Admin = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, canManageProducts, isLoading: authLoading, user, roles } = useAuth();
   const { data: products, isLoading, error } = useProducts();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
@@ -128,10 +130,70 @@ const Admin = () => {
 
   const favoriteCount = products?.filter((p) => p.is_favorite).length || 0;
 
-  if (isLoading) {
+  if (authLoading || isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Not authenticated - show login prompt
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <header className="header-gradient text-white p-6">
+          <div className="flex items-center gap-3 justify-center">
+            <div>
+              <h1 className="text-2xl font-bold">Administrace</h1>
+              <p className="text-sm text-white/70">Správa produktů</p>
+            </div>
+          </div>
+        </header>
+        <main className="flex-1 flex items-center justify-center p-6">
+          <div className="card-elevated p-8 text-center space-y-4 max-w-md">
+            <LogIn className="h-12 w-12 text-primary mx-auto" />
+            <h2 className="text-xl font-bold">Přihlášení vyžadováno</h2>
+            <p className="text-muted-foreground">
+              Pro přístup do administrace se musíte přihlásit.
+            </p>
+            <Button asChild className="w-full">
+              <Link to="/login">Přihlásit se</Link>
+            </Button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Authenticated but no permission
+  if (!canManageProducts) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <header className="header-gradient text-white p-6">
+          <div className="flex items-center gap-3 justify-center">
+            <div>
+              <h1 className="text-2xl font-bold">Administrace</h1>
+              <p className="text-sm text-white/70">Správa produktů</p>
+            </div>
+          </div>
+        </header>
+        <main className="flex-1 flex items-center justify-center p-6">
+          <div className="card-elevated p-8 text-center space-y-4 max-w-md">
+            <ShieldAlert className="h-12 w-12 text-destructive mx-auto" />
+            <h2 className="text-xl font-bold">Přístup zamítnut</h2>
+            <p className="text-muted-foreground">
+              Nemáte oprávnění pro správu produktů. Kontaktujte administrátora pro přidělení role.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Přihlášen jako: {user?.email}
+              {roles.length > 0 && ` (${roles.join(", ")})`}
+            </p>
+            <Button variant="outline" onClick={() => navigate("/")}>
+              Zpět na pokladnu
+            </Button>
+          </div>
+        </main>
       </div>
     );
   }
