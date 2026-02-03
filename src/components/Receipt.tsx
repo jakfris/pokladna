@@ -1,8 +1,7 @@
 import { CartItem } from "@/types/pos";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Trash2, Send, FileText } from "lucide-react";
+import { Trash2, Send, Receipt as ReceiptIcon, ShoppingBag } from "lucide-react";
 
 interface ReceiptProps {
   items: CartItem[];
@@ -17,44 +16,57 @@ const Receipt = ({ items, onRemoveItem, onClear, onSubmit, isSubmitting }: Recei
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <Card className="h-full flex flex-col shadow-lg">
-      <CardHeader className="pb-3 border-b">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <FileText className="h-5 w-5 text-primary" />
-          Účtenka
-          {itemCount > 0 && (
-            <span className="ml-auto text-sm font-normal text-muted-foreground">
-              {itemCount} položek
-            </span>
-          )}
-        </CardTitle>
-      </CardHeader>
+    <div className="card-elevated h-full flex flex-col overflow-hidden">
+      {/* Header */}
+      <div className="p-5 border-b border-border/50 bg-gradient-to-r from-primary/5 to-transparent">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-primary/10">
+            <ReceiptIcon className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-lg font-bold text-foreground">Účtenka</h2>
+            {itemCount > 0 && (
+              <p className="text-sm text-muted-foreground">
+                {itemCount} {itemCount === 1 ? 'položka' : itemCount < 5 ? 'položky' : 'položek'}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
       
-      <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
+      {/* Content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
         {items.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground p-6">
-            <p className="text-center">Zatím žádné položky.<br />Klikněte na produkt pro přidání.</p>
+          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8">
+            <div className="p-4 rounded-full bg-secondary mb-4">
+              <ShoppingBag className="h-10 w-10 text-muted-foreground/50" />
+            </div>
+            <p className="text-center font-medium">Zatím žádné položky</p>
+            <p className="text-center text-sm mt-1">Klikněte na produkt pro přidání</p>
           </div>
         ) : (
           <>
             <ScrollArea className="flex-1">
-              <div className="divide-y">
+              <div className="p-2">
                 {items.map((item, index) => (
-                  <div key={index} className="receipt-item group">
+                  <div 
+                    key={index} 
+                    className="receipt-item group rounded-xl mx-2 my-1"
+                  >
                     <div className="flex-1">
-                      <p className="font-medium">{item.product.name}</p>
+                      <p className="font-semibold text-foreground">{item.product.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {item.quantity}× {item.product.price} Kč
+                        {item.quantity} × {item.product.price} Kč
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="font-semibold">
+                      <span className="font-bold text-lg text-foreground">
                         {item.product.price * item.quantity} Kč
                       </span>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="h-9 w-9 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all"
                         onClick={() => onRemoveItem(index)}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -65,29 +77,33 @@ const Receipt = ({ items, onRemoveItem, onClear, onSubmit, isSubmitting }: Recei
               </div>
             </ScrollArea>
 
-            <div className="border-t p-4 space-y-4 bg-muted/30">
-              <div className="flex justify-between items-center text-xl font-bold">
-                <span>Celkem</span>
-                <span className="text-primary">{total} Kč</span>
+            {/* Footer */}
+            <div className="border-t border-border/50 p-5 space-y-4 bg-gradient-to-t from-secondary/30 to-transparent">
+              <div className="flex justify-between items-center">
+                <span className="text-lg font-semibold text-muted-foreground">Celkem</span>
+                <span className="text-3xl font-bold text-primary">{total} Kč</span>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <Button
                   variant="outline"
-                  className="py-3"
+                  className="py-6 rounded-xl border-2 hover:bg-destructive/5 hover:border-destructive/30 hover:text-destructive transition-all"
                   onClick={onClear}
                   disabled={isSubmitting}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
-                  Smazat vše
+                  Smazat
                 </Button>
                 <Button
-                  className="action-button-success py-3"
+                  className="action-button-success py-6"
                   onClick={onSubmit}
                   disabled={isSubmitting || items.length === 0}
                 >
                   {isSubmitting ? (
-                    <span className="animate-pulse">Odesílám...</span>
+                    <span className="flex items-center gap-2">
+                      <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Odesílám...
+                    </span>
                   ) : (
                     <>
                       <Send className="h-4 w-4 mr-2" />
@@ -99,8 +115,8 @@ const Receipt = ({ items, onRemoveItem, onClear, onSubmit, isSubmitting }: Recei
             </div>
           </>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 

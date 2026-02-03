@@ -2,45 +2,45 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 220 20% 10%;
+    --background: 220 25% 97%;
+    --foreground: 220 25% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 20% 10%;
+    --card-foreground: 220 25% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 10%;
+    --popover-foreground: 220 25% 10%;
 
-    --primary: 199 89% 48%;
+    --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 20% 96%;
-    --secondary-foreground: 220 20% 20%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 25% 20%;
 
-    --muted: 210 15% 93%;
-    --muted-foreground: 220 10% 45%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 10% 46%;
 
-    --accent: 160 84% 39%;
+    --accent: 152 69% 45%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 71% 45%;
+    --success: 152 69% 45%;
     --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 214 20% 88%;
-    --input: 214 20% 88%;
-    --ring: 199 89% 48%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 217 91% 60%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -50,36 +50,43 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Custom gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(217, 91%, 60%) 0%, hsl(199, 89%, 48%) 100%);
+    --gradient-success: linear-gradient(135deg, hsl(152, 69%, 45%) 0%, hsl(160, 84%, 39%) 100%);
+    --gradient-warm: linear-gradient(135deg, hsl(24, 95%, 53%) 0%, hsl(38, 92%, 50%) 100%);
+    --gradient-cool: linear-gradient(135deg, hsl(199, 89%, 48%) 0%, hsl(217, 91%, 60%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0, 0%, 100%) 0%, hsl(220, 25%, 99%) 100%);
   }
 
   .dark {
-    --background: 220 20% 10%;
-    --foreground: 210 20% 98%;
+    --background: 220 25% 8%;
+    --foreground: 220 14% 96%;
 
-    --card: 220 20% 14%;
-    --card-foreground: 210 20% 98%;
+    --card: 220 25% 12%;
+    --card-foreground: 220 14% 96%;
 
-    --popover: 220 20% 14%;
-    --popover-foreground: 210 20% 98%;
+    --popover: 220 25% 12%;
+    --popover-foreground: 220 14% 96%;
 
-    --primary: 199 89% 48%;
+    --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 15% 20%;
-    --secondary-foreground: 210 20% 98%;
+    --secondary: 220 20% 18%;
+    --secondary-foreground: 220 14% 96%;
 
-    --muted: 220 15% 20%;
-    --muted-foreground: 215 15% 60%;
+    --muted: 220 20% 18%;
+    --muted-foreground: 220 10% 60%;
 
-    --accent: 160 84% 39%;
+    --accent: 152 69% 45%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 220 15% 25%;
-    --input: 220 15% 25%;
-    --ring: 199 89% 48%;
+    --border: 220 20% 22%;
+    --input: 220 20% 22%;
+    --ring: 217 91% 60%;
 
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
@@ -105,22 +112,89 @@
 
 @layer components {
   .product-button {
-    @apply h-24 text-lg font-semibold bg-card hover:bg-secondary border-2 border-border hover:border-primary transition-all duration-200 shadow-sm hover:shadow-md active:scale-[0.98];
+    @apply relative h-28 md:h-32 text-lg font-semibold 
+           bg-gradient-to-br from-card to-secondary/50
+           border-2 border-border/50 
+           hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10
+           transition-all duration-300 ease-out
+           active:scale-[0.97] rounded-xl
+           overflow-hidden;
+  }
+
+  .product-button::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-br from-primary/0 to-primary/0 
+           transition-all duration-300;
+  }
+
+  .product-button:hover::before {
+    @apply from-primary/5 to-primary/10;
+  }
+
+  .product-button-icon {
+    @apply w-10 h-10 mb-2 text-primary/80;
   }
 
   .quantity-button {
-    @apply h-14 w-14 text-xl font-bold rounded-full bg-secondary hover:bg-primary hover:text-primary-foreground transition-all duration-200 active:scale-95;
+    @apply h-16 w-16 text-2xl font-bold rounded-2xl 
+           bg-secondary hover:bg-primary hover:text-primary-foreground 
+           transition-all duration-200 active:scale-95
+           shadow-sm hover:shadow-md;
   }
 
   .receipt-item {
-    @apply flex justify-between items-center py-3 px-4 border-b border-border last:border-b-0;
+    @apply flex justify-between items-center py-4 px-5 
+           border-b border-border/50 last:border-b-0
+           hover:bg-secondary/30 transition-colors duration-200;
   }
 
   .action-button-primary {
-    @apply bg-primary text-primary-foreground hover:bg-primary/90 font-semibold py-4 text-lg shadow-lg hover:shadow-xl transition-all duration-200;
+    @apply bg-primary text-primary-foreground hover:bg-primary/90 
+           font-semibold py-4 text-lg shadow-lg hover:shadow-xl 
+           transition-all duration-200 rounded-xl;
   }
 
   .action-button-success {
-    @apply bg-accent text-accent-foreground hover:bg-accent/90 font-semibold py-4 text-lg shadow-lg hover:shadow-xl transition-all duration-200;
+    @apply font-semibold py-4 text-lg shadow-lg hover:shadow-xl 
+           transition-all duration-200 rounded-xl
+           text-accent-foreground;
+    background: var(--gradient-success);
   }
+
+  .action-button-success:hover {
+    @apply opacity-90;
+  }
+
+  .header-gradient {
+    background: var(--gradient-primary);
+  }
+
+  .card-elevated {
+    @apply bg-card rounded-2xl shadow-xl shadow-foreground/5 border border-border/50;
+    background: var(--gradient-card);
+  }
+
+  .more-button {
+    @apply w-full h-16 text-lg border-2 border-dashed border-primary/30 
+           hover:border-primary hover:bg-primary/5 
+           transition-all duration-300 rounded-xl
+           text-primary font-medium;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-border rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/30;
 }
