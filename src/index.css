@@ -111,28 +111,31 @@
 }
 
 @layer components {
-  .product-button {
-    @apply relative h-28 md:h-32 text-lg font-semibold 
-           bg-gradient-to-br from-card to-secondary/50
-           border-2 border-border/50 
+  .product-card {
+    @apply relative flex flex-col items-center justify-center gap-2
+           min-h-[120px] md:min-h-[140px] p-3 md:p-4
+           bg-gradient-to-br from-card to-secondary/30
+           border-2 border-border/50 rounded-xl
            hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10
            transition-all duration-300 ease-out
-           active:scale-[0.97] rounded-xl
+           active:scale-[0.97] cursor-pointer
            overflow-hidden;
   }
 
-  .product-button::before {
+  .product-card::before {
     content: '';
     @apply absolute inset-0 bg-gradient-to-br from-primary/0 to-primary/0 
            transition-all duration-300;
   }
 
-  .product-button:hover::before {
+  .product-card:hover::before {
     @apply from-primary/5 to-primary/10;
   }
 
-  .product-button-icon {
-    @apply w-10 h-10 mb-2 text-primary/80;
+  .product-card-icon {
+    @apply flex items-center justify-center w-10 h-10 md:w-12 md:h-12 
+           rounded-xl bg-primary/10 
+           group-hover:bg-primary transition-colors duration-300;
   }
 
   .quantity-button {

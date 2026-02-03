@@ -1,5 +1,4 @@
 import { Product } from "@/types/pos";
-import { Button } from "@/components/ui/button";
 import { 
   Coffee, 
   Leaf, 
@@ -33,26 +32,27 @@ const productIcons: Record<string, React.ComponentType<{ className?: string }>> 
 
 const ProductGrid = ({ products, onProductSelect }: ProductGridProps) => {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
       {products.map((product) => {
         const Icon = productIcons[product.id] || Coffee;
         return (
-          <Button
+          <button
             key={product.id}
-            variant="ghost"
-            className="product-button flex flex-col items-center justify-center gap-2 p-4"
+            className="product-card group"
             onClick={() => onProductSelect(product)}
           >
-            <div className="p-3 rounded-xl bg-primary/10">
-              <Icon className="w-7 h-7 text-primary" />
+            <div className="product-card-icon">
+              <Icon className="w-6 h-6 md:w-7 md:h-7 text-primary group-hover:text-primary-foreground transition-colors" />
             </div>
-            <span className="text-base md:text-lg font-semibold text-foreground">
-              {product.name}
-            </span>
-            <span className="text-sm font-bold text-primary">
-              {product.price} Kč
-            </span>
-          </Button>
+            <div className="flex flex-col items-center gap-1 min-w-0 w-full">
+              <span className="text-sm md:text-base font-semibold text-foreground text-center leading-tight line-clamp-2">
+                {product.name}
+              </span>
+              <span className="text-xs md:text-sm font-bold text-primary">
+                {product.price} Kč
+              </span>
+            </div>
+          </button>
         );
       })}
     </div>
