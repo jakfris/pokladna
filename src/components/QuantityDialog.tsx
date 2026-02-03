@@ -18,20 +18,21 @@ interface QuantityDialogProps {
 }
 
 const QuantityDialog = ({ product, open, onClose, onConfirm }: QuantityDialogProps) => {
-  const [quantity, setQuantity] = useState(1);
-  const [inputValue, setInputValue] = useState("1");
+  const [quantity, setQuantity] = useState(0);
+  const [inputValue, setInputValue] = useState("");
 
   const handleConfirm = () => {
-    if (product && quantity > 0) {
-      onConfirm(product, quantity);
+    const finalQuantity = quantity > 0 ? quantity : 1;
+    if (product) {
+      onConfirm(product, finalQuantity);
       resetState();
       onClose();
     }
   };
 
   const resetState = () => {
-    setQuantity(1);
-    setInputValue("1");
+    setQuantity(0);
+    setInputValue("");
   };
 
   const handleOpenChange = (isOpen: boolean) => {
@@ -42,7 +43,7 @@ const QuantityDialog = ({ product, open, onClose, onConfirm }: QuantityDialogPro
   };
 
   const handleNumpadClick = (num: number) => {
-    const newValue = inputValue === "0" ? String(num) : inputValue + String(num);
+    const newValue = inputValue === "" || inputValue === "0" ? String(num) : inputValue + String(num);
     const numericValue = parseInt(newValue, 10);
     if (numericValue <= 999) {
       setInputValue(newValue);
@@ -56,14 +57,14 @@ const QuantityDialog = ({ product, open, onClose, onConfirm }: QuantityDialogPro
       setInputValue(newValue);
       setQuantity(parseInt(newValue, 10));
     } else {
-      setInputValue("1");
-      setQuantity(1);
+      setInputValue("");
+      setQuantity(0);
     }
   };
 
   const handleClear = () => {
-    setInputValue("1");
-    setQuantity(1);
+    setInputValue("");
+    setQuantity(0);
   };
 
   if (!product) return null;
@@ -101,7 +102,7 @@ const QuantityDialog = ({ product, open, onClose, onConfirm }: QuantityDialogPro
               
               <div className="relative">
                 <span className="text-5xl font-bold w-20 text-center block text-foreground">
-                  {quantity}
+                  {inputValue || "—"}
                 </span>
                 <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-sm text-muted-foreground">
                   kusů
@@ -124,7 +125,7 @@ const QuantityDialog = ({ product, open, onClose, onConfirm }: QuantityDialogPro
             <div className="text-center py-4 bg-secondary/50 rounded-xl w-full mt-4">
               <span className="text-sm text-muted-foreground">Celkem</span>
               <p className="text-2xl font-bold text-primary">
-                {product.price * quantity} Kč
+                {product.price * (quantity > 0 ? quantity : 1)} Kč
               </p>
             </div>
           </div>
