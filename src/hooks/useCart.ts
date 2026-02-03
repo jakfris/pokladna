@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { CartItem, Product, Receipt } from "@/types/pos";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 const WEBHOOK_URL = "https://hook.eu1.make.celonis.com/u521kd500s1y1956s73kj6wak69xkb4o";
 
 export const useCart = () => {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const queryClient = useQueryClient();
 
   const addItem = (product: Product, quantity: number) => {
     setItems((prev) => {
@@ -41,38 +44,74 @@ export const useCart = () => {
   const submitReceipt = async () => {
     if (items.length === 0) return;
 
+    const total = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+
     const receipt: Receipt = {
       id: `REC-${Date.now()}`,
       items: items.map((item) => ({
         product: item.product,
         quantity: item.quantity,
       })),
-      total: items.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
+      total,
       createdAt: new Date().toISOString(),
     };
 
     setIsSubmitting(true);
 
     try {
-      if (WEBHOOK_URL) {
-        const response = await fetch(WEBHOOK_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(receipt),
-        });
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
 
-        if (!response.ok) {
-          throw new Error("Chyba při odesílání");
+      // Save to database
+      const { data: savedReceipt, error: receiptError } = await supabase
+        .from("receipts")
+        .insert({
+          user_id: user?.id || null,
+          total,
+        })
+        .select()
+        .single();
+
+      if (receiptError) throw receiptError;
+
+      // Save receipt items
+      const receiptItems = items.map((item) => ({
+        receipt_id: savedReceipt.id,
+        product_name: item.product.name,
+        product_price: item.product.price,
+        quantity: item.quantity,
+        subtotal: item.product.price * item.quantity,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from("receipt_items")
+        .insert(receiptItems);
+
+      if (itemsError) throw itemsError;
+
+      // Send to webhook
+      if (WEBHOOK_URL) {
+        try {
+          await fetch(WEBHOOK_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(receipt),
+          });
+        } catch (webhookError) {
+          console.warn("Webhook failed, but receipt was saved:", webhookError);
         }
       }
+
+      // Invalidate receipts query to refresh history
+      queryClient.invalidateQueries({ queryKey: ["receipts"] });
 
       // Log the receipt for demo purposes
       console.log("Receipt submitted:", JSON.stringify(receipt, null, 2));
       
-      toast.success(`Účtenka ${receipt.id} uložena!`, {
-        description: `Celkem: ${receipt.total} Kč`,
+      toast.success(`Účtenka uložena!`, {
+        description: `Celkem: ${total} Kč`,
       });
       
       setItems([]);

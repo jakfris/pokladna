@@ -80,6 +80,65 @@ export type Database = {
         }
         Relationships: []
       }
+      receipt_items: {
+        Row: {
+          created_at: string
+          id: string
+          product_name: string
+          product_price: number
+          quantity: number
+          receipt_id: string
+          subtotal: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_name: string
+          product_price: number
+          quantity: number
+          receipt_id: string
+          subtotal: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_name?: string
+          product_price?: number
+          quantity?: number
+          receipt_id?: string
+          subtotal?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipt_items_receipt_id_fkey"
+            columns: ["receipt_id"]
+            isOneToOne: false
+            referencedRelation: "receipts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      receipts: {
+        Row: {
+          created_at: string
+          id: string
+          total: number
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          total: number
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          total?: number
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

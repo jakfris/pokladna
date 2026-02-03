@@ -9,7 +9,7 @@ import QuantityDialog from "@/components/QuantityDialog";
 import ProductListDialog from "@/components/ProductListDialog";
 import Receipt from "@/components/Receipt";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, ShoppingCart, Zap, Settings, Loader2, LogIn, LogOut, User } from "lucide-react";
+import { MoreHorizontal, ShoppingCart, Zap, Settings, Loader2, LogIn, LogOut, User, History } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,6 +66,16 @@ const Index = () => {
             </div>
 
             <div className="hidden lg:flex items-center gap-2">
+              {/* History button */}
+              <Button
+                variant="secondary"
+                className="bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-sm"
+                onClick={() => navigate("/history")}
+              >
+                <History className="h-5 w-5 mr-2" />
+                Historie
+              </Button>
+
               {/* Admin button - only show if user can manage products */}
               {canManageProducts && (
                 <Button
@@ -160,6 +170,15 @@ const Index = () => {
             
             {/* Mobile buttons */}
             <div className="lg:hidden space-y-3">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => navigate("/history")}
+              >
+                <History className="h-5 w-5 mr-2" />
+                Historie účtenek
+              </Button>
+              
               {canManageProducts && (
                 <Button
                   variant="outline"
