@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -144,13 +144,6 @@ const Login = () => {
               </svg>
               Přihlásit se přes Google
             </Button>
-
-            <p className="text-center text-sm text-muted-foreground">
-              Nemáte účet?{" "}
-              <Link to="/register" className="text-primary hover:underline font-medium">
-                Zaregistrujte se
-              </Link>
-            </p>
           </div>
         </div>
       </main>
