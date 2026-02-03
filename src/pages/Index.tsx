@@ -1,19 +1,28 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Product } from "@/types/pos";
 import { useFavoriteProducts, useNonFavoriteProducts } from "@/hooks/useProducts";
 import { useCart } from "@/hooks/useCart";
+import { useAuth } from "@/hooks/useAuth";
 import ProductGrid from "@/components/ProductGrid";
 import QuantityDialog from "@/components/QuantityDialog";
 import ProductListDialog from "@/components/ProductListDialog";
 import Receipt from "@/components/Receipt";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, ShoppingCart, Zap, Settings, Loader2 } from "lucide-react";
+import { MoreHorizontal, ShoppingCart, Zap, Settings, Loader2, LogIn, LogOut, User } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Index = () => {
   const navigate = useNavigate();
   const { data: favoriteProducts, isLoading: favLoading } = useFavoriteProducts();
   const { data: additionalProducts, isLoading: addLoading } = useNonFavoriteProducts();
+  const { isAuthenticated, user, profile, canManageProducts, signOut, isLoading: authLoading } = useAuth();
   
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quantityDialogOpen, setQuantityDialogOpen] = useState(false);
@@ -36,6 +45,10 @@ const Index = () => {
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const total = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
 
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -51,15 +64,54 @@ const Index = () => {
                 <p className="text-sm text-white/70">Rychlý prodej</p>
               </div>
             </div>
-            {/* Admin button */}
-            <Button
-              variant="secondary"
-              className="hidden lg:flex bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-sm"
-              onClick={() => navigate("/admin")}
-            >
-              <Settings className="h-5 w-5 mr-2" />
-              Administrace
-            </Button>
+
+            <div className="hidden lg:flex items-center gap-2">
+              {/* Admin button - only show if user can manage products */}
+              {canManageProducts && (
+                <Button
+                  variant="secondary"
+                  className="bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-sm"
+                  onClick={() => navigate("/admin")}
+                >
+                  <Settings className="h-5 w-5 mr-2" />
+                  Administrace
+                </Button>
+              )}
+
+              {/* User menu */}
+              {isAuthenticated ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="secondary"
+                      className="bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-sm"
+                    >
+                      <User className="h-5 w-5 mr-2" />
+                      {profile?.full_name || user?.email?.split("@")[0] || "Uživatel"}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                      {user?.email}
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut}>
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Odhlásit se
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button
+                  variant="secondary"
+                  className="bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-sm"
+                  onClick={() => navigate("/login")}
+                >
+                  <LogIn className="h-5 w-5 mr-2" />
+                  Přihlásit
+                </Button>
+              )}
+            </div>
             
             {/* Mobile cart button */}
             <Button
@@ -106,15 +158,39 @@ const Index = () => {
               Další položky
             </Button>
             
-            {/* Mobile Admin Button */}
-            <Button
-              variant="outline"
-              className="lg:hidden w-full"
-              onClick={() => navigate("/admin")}
-            >
-              <Settings className="h-5 w-5 mr-2" />
-              Administrace produktů
-            </Button>
+            {/* Mobile buttons */}
+            <div className="lg:hidden space-y-3">
+              {canManageProducts && (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => navigate("/admin")}
+                >
+                  <Settings className="h-5 w-5 mr-2" />
+                  Administrace produktů
+                </Button>
+              )}
+              
+              {isAuthenticated ? (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleSignOut}
+                >
+                  <LogOut className="h-5 w-5 mr-2" />
+                  Odhlásit ({profile?.full_name || user?.email?.split("@")[0]})
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => navigate("/login")}
+                >
+                  <LogIn className="h-5 w-5 mr-2" />
+                  Přihlásit se
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Receipt Section - Desktop */}
