@@ -45,6 +45,7 @@ import {
 } from "lucide-react";
 import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct } from "@/hooks/useProducts";
 import { useUsers, useUpdateUserProfile, useAddUserRole, useRemoveUserRole } from "@/hooks/useUsers";
+import { useCreateUser } from "@/hooks/useCreateUser";
 import { useAuth, AppRole } from "@/hooks/useAuth";
 import { Product } from "@/types/product";
 
@@ -75,6 +76,7 @@ const Admin = () => {
   const updateUserProfile = useUpdateUserProfile();
   const addUserRole = useAddUserRole();
   const removeUserRole = useRemoveUserRole();
+  const createUser = useCreateUser();
 
   const [activeTab, setActiveTab] = useState("products");
 
@@ -86,12 +88,20 @@ const Admin = () => {
 
   // User dialogs
   const [userDialogOpen, setUserDialogOpen] = useState(false);
+  const [createUserDialogOpen, setCreateUserDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<{
     userId: string;
     fullName: string;
     email: string | null;
     roles: AppRole[];
   } | null>(null);
+
+  const [newUserFormData, setNewUserFormData] = useState({
+    email: "",
+    password: "",
+    fullName: "",
+    role: "user" as AppRole,
+  });
 
   const [formData, setFormData] = useState({
     name: "",
@@ -123,6 +133,27 @@ const Admin = () => {
       selectedRole: "",
     });
     setEditingUser(null);
+  };
+
+  const resetNewUserForm = () => {
+    setNewUserFormData({
+      email: "",
+      password: "",
+      fullName: "",
+      role: "user",
+    });
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await createUser.mutateAsync({
+      email: newUserFormData.email.trim(),
+      password: newUserFormData.password,
+      fullName: newUserFormData.fullName.trim() || undefined,
+      role: newUserFormData.role,
+    });
+    setCreateUserDialogOpen(false);
+    resetNewUserForm();
   };
 
   const openCreateDialog = () => {
@@ -354,13 +385,11 @@ const Admin = () => {
             )}
             {activeTab === "users" && isAdmin && (
               <Button
-                asChild
+                onClick={() => setCreateUserDialogOpen(true)}
                 className="bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-sm"
               >
-                <Link to="/register">
-                  <Plus className="h-5 w-5 mr-2" />
-                  Přidat uživatele
-                </Link>
+                <Plus className="h-5 w-5 mr-2" />
+                Přidat uživatele
               </Button>
             )}
           </div>
@@ -828,6 +857,104 @@ const Admin = () => {
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 ) : null}
                 Uložit jméno
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create User Dialog */}
+      <Dialog open={createUserDialogOpen} onOpenChange={setCreateUserDialogOpen}>
+        <DialogContent>
+          <form onSubmit={handleCreateUser}>
+            <DialogHeader>
+              <DialogTitle>Přidat nového uživatele</DialogTitle>
+              <DialogDescription>
+                Vytvořte nový uživatelský účet s přihlašovacími údaji.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="newUserEmail">E-mail *</Label>
+                <Input
+                  id="newUserEmail"
+                  type="email"
+                  value={newUserFormData.email}
+                  onChange={(e) =>
+                    setNewUserFormData({ ...newUserFormData, email: e.target.value })
+                  }
+                  placeholder="uzivatel@example.com"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="newUserPassword">Heslo *</Label>
+                <Input
+                  id="newUserPassword"
+                  type="password"
+                  value={newUserFormData.password}
+                  onChange={(e) =>
+                    setNewUserFormData({ ...newUserFormData, password: e.target.value })
+                  }
+                  placeholder="Minimálně 6 znaků"
+                  minLength={6}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="newUserFullName">Celé jméno</Label>
+                <Input
+                  id="newUserFullName"
+                  type="text"
+                  value={newUserFormData.fullName}
+                  onChange={(e) =>
+                    setNewUserFormData({ ...newUserFormData, fullName: e.target.value })
+                  }
+                  placeholder="Jan Novák"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Role</Label>
+                <Select
+                  value={newUserFormData.role}
+                  onValueChange={(value) =>
+                    setNewUserFormData({ ...newUserFormData, role: value as AppRole })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AVAILABLE_ROLES.map((role) => (
+                      <SelectItem key={role} value={role}>
+                        {ROLE_LABELS[role]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setCreateUserDialogOpen(false);
+                  resetNewUserForm();
+                }}
+              >
+                Zrušit
+              </Button>
+              <Button type="submit" disabled={createUser.isPending}>
+                {createUser.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Plus className="h-4 w-4 mr-2" />
+                )}
+                Vytvořit uživatele
               </Button>
             </DialogFooter>
           </form>
