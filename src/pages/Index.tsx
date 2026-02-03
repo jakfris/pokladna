@@ -1,21 +1,28 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Product } from "@/types/pos";
-import { mainProducts, additionalProducts } from "@/data/products";
+import { useFavoriteProducts, useNonFavoriteProducts } from "@/hooks/useProducts";
 import { useCart } from "@/hooks/useCart";
 import ProductGrid from "@/components/ProductGrid";
 import QuantityDialog from "@/components/QuantityDialog";
 import ProductListDialog from "@/components/ProductListDialog";
 import Receipt from "@/components/Receipt";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, ShoppingCart, Zap } from "lucide-react";
+import { MoreHorizontal, ShoppingCart, Zap, Settings, Loader2 } from "lucide-react";
 
 const Index = () => {
+  const navigate = useNavigate();
+  const { data: favoriteProducts, isLoading: favLoading } = useFavoriteProducts();
+  const { data: additionalProducts, isLoading: addLoading } = useNonFavoriteProducts();
+  
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quantityDialogOpen, setQuantityDialogOpen] = useState(false);
   const [productListOpen, setProductListOpen] = useState(false);
   const [mobileReceiptOpen, setMobileReceiptOpen] = useState(false);
   
   const { items, isSubmitting, addItem, removeItem, clearCart, submitReceipt } = useCart();
+
+  const isLoading = favLoading || addLoading;
 
   const handleProductSelect = (product: Product) => {
     setSelectedProduct(product);
@@ -44,6 +51,15 @@ const Index = () => {
                 <p className="text-sm text-white/70">Rychlý prodej</p>
               </div>
             </div>
+            {/* Admin button */}
+            <Button
+              variant="secondary"
+              className="hidden lg:flex bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-sm"
+              onClick={() => navigate("/admin")}
+            >
+              <Settings className="h-5 w-5 mr-2" />
+              Administrace
+            </Button>
             
             {/* Mobile cart button */}
             <Button
@@ -63,6 +79,11 @@ const Index = () => {
       </header>
 
       <main className="container mx-auto px-4 py-6">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : (
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Products Section */}
           <div className="lg:col-span-2 space-y-6">
@@ -72,7 +93,7 @@ const Index = () => {
                 <div className="h-1 w-1 rounded-full bg-primary" />
                 <h2 className="text-lg font-bold text-foreground">Rychlý výběr</h2>
               </div>
-              <ProductGrid products={mainProducts} onProductSelect={handleProductSelect} />
+              <ProductGrid products={favoriteProducts || []} onProductSelect={handleProductSelect} />
             </section>
 
             {/* More Products Button */}
@@ -83,6 +104,16 @@ const Index = () => {
             >
               <MoreHorizontal className="h-5 w-5 mr-2" />
               Další položky
+            </Button>
+            
+            {/* Mobile Admin Button */}
+            <Button
+              variant="outline"
+              className="lg:hidden w-full"
+              onClick={() => navigate("/admin")}
+            >
+              <Settings className="h-5 w-5 mr-2" />
+              Administrace produktů
             </Button>
           </div>
 
@@ -99,6 +130,7 @@ const Index = () => {
             </div>
           </div>
         </div>
+        )}
       </main>
 
       {/* Mobile Receipt Bottom Bar */}
@@ -154,7 +186,7 @@ const Index = () => {
       />
 
       <ProductListDialog
-        products={additionalProducts}
+        products={additionalProducts || []}
         open={productListOpen}
         onClose={() => setProductListOpen(false)}
         onProductSelect={handleProductSelect}
