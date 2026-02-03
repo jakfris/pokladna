@@ -1,7 +1,9 @@
 import { CartItem } from "@/types/pos";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Trash2, Send, Receipt as ReceiptIcon, ShoppingBag } from "lucide-react";
+import { Trash2, Send, Receipt as ReceiptIcon, ShoppingBag, Printer } from "lucide-react";
+import { useThermalPrinter } from "@/hooks/useThermalPrinter";
+import PrinterButton from "@/components/PrinterButton";
 
 interface ReceiptProps {
   items: CartItem[];
@@ -14,6 +16,21 @@ interface ReceiptProps {
 const Receipt = ({ items, onRemoveItem, onClear, onSubmit, isSubmitting }: ReceiptProps) => {
   const total = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const { isConnected, isPrinting, printReceipt, isSupported } = useThermalPrinter();
+
+  const handlePrint = async () => {
+    if (items.length === 0) return;
+    await printReceipt(items, total);
+  };
+
+  const handleSubmitAndPrint = async () => {
+    // First submit
+    onSubmit();
+    // Then print if connected
+    if (isConnected && items.length > 0) {
+      await printReceipt(items, total);
+    }
+  };
 
   return (
     <div className="card-elevated h-full flex flex-col overflow-hidden">
@@ -31,6 +48,7 @@ const Receipt = ({ items, onRemoveItem, onClear, onSubmit, isSubmitting }: Recei
               </p>
             )}
           </div>
+          <PrinterButton />
         </div>
       </div>
       
@@ -84,7 +102,7 @@ const Receipt = ({ items, onRemoveItem, onClear, onSubmit, isSubmitting }: Recei
                 <span className="text-3xl font-bold text-primary">{total} Kč</span>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <Button
                   variant="outline"
                   className="py-6 rounded-xl border-2 hover:bg-destructive/5 hover:border-destructive/30 hover:text-destructive transition-all"
@@ -94,9 +112,26 @@ const Receipt = ({ items, onRemoveItem, onClear, onSubmit, isSubmitting }: Recei
                   <Trash2 className="h-4 w-4 mr-2" />
                   Smazat
                 </Button>
+                
+                {isSupported && (
+                  <Button
+                    variant="outline"
+                    className={`py-6 rounded-xl border-2 transition-all ${
+                      isConnected 
+                        ? "border-green-500/30 text-green-600 hover:bg-green-500/5" 
+                        : "hover:border-primary/30"
+                    }`}
+                    onClick={handlePrint}
+                    disabled={isPrinting || items.length === 0}
+                  >
+                    <Printer className="h-4 w-4 mr-2" />
+                    {isPrinting ? "Tisknu..." : "Tisk"}
+                  </Button>
+                )}
+                
                 <Button
-                  className="action-button-success py-6"
-                  onClick={onSubmit}
+                  className={`action-button-success py-6 ${!isSupported ? "col-span-2" : ""}`}
+                  onClick={isConnected ? handleSubmitAndPrint : onSubmit}
                   disabled={isSubmitting || items.length === 0}
                 >
                   {isSubmitting ? (
@@ -107,7 +142,7 @@ const Receipt = ({ items, onRemoveItem, onClear, onSubmit, isSubmitting }: Recei
                   ) : (
                     <>
                       <Send className="h-4 w-4 mr-2" />
-                      Uložit
+                      {isConnected ? "Uložit + Tisk" : "Uložit"}
                     </>
                   )}
                 </Button>
