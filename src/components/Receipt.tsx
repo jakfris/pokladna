@@ -1,9 +1,10 @@
-import { CartItem } from "@/types/pos";
+import { CartItem, PaymentType } from "@/types/pos";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Trash2, Send, Receipt as ReceiptIcon, ShoppingBag, Printer } from "lucide-react";
+import { Trash2, Send, Receipt as ReceiptIcon, ShoppingBag, Printer, CreditCard, Banknote } from "lucide-react";
 import { useThermalPrinter } from "@/hooks/useThermalPrinter";
 import PrinterButton from "@/components/PrinterButton";
+import { cn } from "@/lib/utils";
 
 interface ReceiptProps {
   items: CartItem[];
@@ -11,9 +12,19 @@ interface ReceiptProps {
   onClear: () => void;
   onSubmit: () => void;
   isSubmitting: boolean;
+  paymentType: PaymentType;
+  onPaymentTypeChange: (type: PaymentType) => void;
 }
 
-const Receipt = ({ items, onRemoveItem, onClear, onSubmit, isSubmitting }: ReceiptProps) => {
+const Receipt = ({ 
+  items, 
+  onRemoveItem, 
+  onClear, 
+  onSubmit, 
+  isSubmitting,
+  paymentType,
+  onPaymentTypeChange,
+}: ReceiptProps) => {
   const total = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const { isConnected, isPrinting, printReceipt, isSupported } = useThermalPrinter();
@@ -97,6 +108,41 @@ const Receipt = ({ items, onRemoveItem, onClear, onSubmit, isSubmitting }: Recei
 
             {/* Footer */}
             <div className="border-t border-border/50 p-5 space-y-4 bg-gradient-to-t from-secondary/30 to-transparent">
+              {/* Payment Type Selector */}
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Způsob platby</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      "py-4 rounded-xl border-2 transition-all",
+                      paymentType === "hotovost" 
+                        ? "border-primary bg-primary/10 text-primary" 
+                        : "hover:border-primary/30"
+                    )}
+                    onClick={() => onPaymentTypeChange("hotovost")}
+                  >
+                    <Banknote className="h-5 w-5 mr-2" />
+                    Hotovost
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      "py-4 rounded-xl border-2 transition-all",
+                      paymentType === "karta" 
+                        ? "border-primary bg-primary/10 text-primary" 
+                        : "hover:border-primary/30"
+                    )}
+                    onClick={() => onPaymentTypeChange("karta")}
+                  >
+                    <CreditCard className="h-5 w-5 mr-2" />
+                    Karta
+                  </Button>
+                </div>
+              </div>
+
               <div className="flex justify-between items-center">
                 <span className="text-lg font-semibold text-muted-foreground">Celkem</span>
                 <span className="text-3xl font-bold text-primary">{total} Kč</span>
@@ -116,11 +162,12 @@ const Receipt = ({ items, onRemoveItem, onClear, onSubmit, isSubmitting }: Recei
                 {isSupported && (
                   <Button
                     variant="outline"
-                    className={`py-6 rounded-xl border-2 transition-all ${
+                    className={cn(
+                      "py-6 rounded-xl border-2 transition-all",
                       isConnected 
                         ? "border-green-500/30 text-green-600 hover:bg-green-500/5" 
                         : "hover:border-primary/30"
-                    }`}
+                    )}
                     onClick={handlePrint}
                     disabled={isPrinting || items.length === 0}
                   >
@@ -130,7 +177,7 @@ const Receipt = ({ items, onRemoveItem, onClear, onSubmit, isSubmitting }: Recei
                 )}
                 
                 <Button
-                  className={`action-button-success py-6 ${!isSupported ? "col-span-2" : ""}`}
+                  className={cn("action-button-success py-6", !isSupported && "col-span-2")}
                   onClick={isConnected ? handleSubmitAndPrint : onSubmit}
                   disabled={isSubmitting || items.length === 0}
                 >

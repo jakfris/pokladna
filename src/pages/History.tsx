@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useReceipts, ReceiptWithItems } from "@/hooks/useReceipts";
+import { useReceipts, ReceiptWithItems, useRefundReceipt } from "@/hooks/useReceipts";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -12,6 +14,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Collapsible,
   CollapsibleContent,
@@ -28,18 +38,35 @@ import {
   Loader2,
   Receipt,
   X,
+  RotateCcw,
+  CreditCard,
+  Banknote,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cs } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
-const ReceiptRow = ({ receipt }: { receipt: ReceiptWithItems }) => {
+const PAYMENT_TYPE_LABELS = {
+  hotovost: "Hotovost",
+  karta: "Karta",
+};
+
+interface ReceiptRowProps {
+  receipt: ReceiptWithItems;
+  canRefund: boolean;
+  onRefund: (receipt: ReceiptWithItems) => void;
+}
+
+const ReceiptRow = ({ receipt, canRefund, onRefund }: ReceiptRowProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger asChild>
-        <TableRow className="cursor-pointer hover:bg-muted/50">
+        <TableRow className={cn(
+          "cursor-pointer hover:bg-muted/50",
+          receipt.is_refunded && "bg-destructive/5"
+        )}>
           <TableCell>
             <div className="flex items-center gap-2">
               {isOpen ? (
@@ -48,18 +75,54 @@ const ReceiptRow = ({ receipt }: { receipt: ReceiptWithItems }) => {
                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
               )}
               <span className="font-mono text-sm">{receipt.id.slice(0, 8)}...</span>
+              {receipt.is_refunded && (
+                <Badge variant="destructive" className="text-xs">
+                  Storno
+                </Badge>
+              )}
             </div>
           </TableCell>
           <TableCell>
             {format(new Date(receipt.created_at), "d. M. yyyy HH:mm", { locale: cs })}
           </TableCell>
+          <TableCell>
+            <div className="flex items-center gap-1">
+              {receipt.payment_type === "karta" ? (
+                <CreditCard className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <Banknote className="h-4 w-4 text-muted-foreground" />
+              )}
+              <span className="text-sm">{PAYMENT_TYPE_LABELS[receipt.payment_type]}</span>
+            </div>
+          </TableCell>
           <TableCell className="text-center">{receipt.items.length}</TableCell>
-          <TableCell className="text-right font-semibold">{Number(receipt.total).toFixed(0)} Kč</TableCell>
+          <TableCell className={cn(
+            "text-right font-semibold",
+            receipt.is_refunded && "text-destructive line-through"
+          )}>
+            {Number(receipt.total).toFixed(0)} Kč
+          </TableCell>
+          <TableCell className="text-right">
+            {canRefund && !receipt.is_refunded && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRefund(receipt);
+                }}
+              >
+                <RotateCcw className="h-4 w-4 mr-1" />
+                Storno
+              </Button>
+            )}
+          </TableCell>
         </TableRow>
       </CollapsibleTrigger>
       <CollapsibleContent asChild>
         <tr>
-          <td colSpan={4} className="p-0">
+          <td colSpan={6} className="p-0">
             <div className="bg-muted/30 p-4 border-t">
               <h4 className="text-sm font-medium mb-2">Položky účtenky:</h4>
               <div className="space-y-1">
@@ -77,6 +140,13 @@ const ReceiptRow = ({ receipt }: { receipt: ReceiptWithItems }) => {
                   </div>
                 ))}
               </div>
+              {receipt.is_refunded && receipt.refunded_at && (
+                <div className="mt-3 pt-3 border-t border-destructive/20">
+                  <p className="text-sm text-destructive">
+                    Stornováno: {format(new Date(receipt.refunded_at), "d. M. yyyy HH:mm", { locale: cs })}
+                  </p>
+                </div>
+              )}
             </div>
           </td>
         </tr>
@@ -89,8 +159,14 @@ const History = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+  const [receiptToRefund, setReceiptToRefund] = useState<ReceiptWithItems | null>(null);
 
   const { data: receipts, isLoading, error } = useReceipts(searchQuery, dateFrom, dateTo);
+  const { isAdmin, isManager } = useAuth();
+  const refundMutation = useRefundReceipt();
+
+  const canRefund = isAdmin || isManager;
 
   const clearFilters = () => {
     setSearchQuery("");
@@ -99,6 +175,25 @@ const History = () => {
   };
 
   const hasFilters = searchQuery || dateFrom || dateTo;
+
+  const handleRefundClick = (receipt: ReceiptWithItems) => {
+    setReceiptToRefund(receipt);
+    setRefundDialogOpen(true);
+  };
+
+  const handleRefundConfirm = async () => {
+    if (receiptToRefund) {
+      await refundMutation.mutateAsync(receiptToRefund);
+      setRefundDialogOpen(false);
+      setReceiptToRefund(null);
+    }
+  };
+
+  // Calculate totals
+  const activeReceipts = receipts?.filter(r => !r.is_refunded) || [];
+  const refundedReceipts = receipts?.filter(r => r.is_refunded) || [];
+  const activeTotal = activeReceipts.reduce((sum, r) => sum + Number(r.total), 0);
+  const refundedTotal = refundedReceipts.reduce((sum, r) => sum + Number(r.total), 0);
 
   return (
     <div className="min-h-screen bg-background">
@@ -235,13 +330,20 @@ const History = () => {
                   <TableRow>
                     <TableHead>ID</TableHead>
                     <TableHead>Datum a čas</TableHead>
+                    <TableHead>Platba</TableHead>
                     <TableHead className="text-center">Položek</TableHead>
                     <TableHead className="text-right">Celkem</TableHead>
+                    <TableHead className="text-right">Akce</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {receipts.map((receipt) => (
-                    <ReceiptRow key={receipt.id} receipt={receipt} />
+                    <ReceiptRow 
+                      key={receipt.id} 
+                      receipt={receipt} 
+                      canRefund={canRefund}
+                      onRefund={handleRefundClick}
+                    />
                   ))}
                 </TableBody>
               </Table>
@@ -251,14 +353,64 @@ const History = () => {
 
         {/* Summary */}
         {receipts && receipts.length > 0 && (
-          <div className="mt-4 text-sm text-muted-foreground text-center">
-            Zobrazeno {receipts.length} účtenek • Celkem:{" "}
-            <span className="font-semibold text-foreground">
-              {receipts.reduce((sum, r) => sum + Number(r.total), 0).toFixed(0)} Kč
-            </span>
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <Card className="p-4">
+              <p className="text-muted-foreground">Aktivní účtenky</p>
+              <p className="text-2xl font-bold text-foreground">
+                {activeReceipts.length} • {activeTotal.toFixed(0)} Kč
+              </p>
+            </Card>
+            {refundedReceipts.length > 0 && (
+              <Card className="p-4 border-destructive/20">
+                <p className="text-muted-foreground">Stornováno</p>
+                <p className="text-2xl font-bold text-destructive">
+                  {refundedReceipts.length} • -{refundedTotal.toFixed(0)} Kč
+                </p>
+              </Card>
+            )}
+            <Card className="p-4 border-primary/20">
+              <p className="text-muted-foreground">Čistý obrat</p>
+              <p className="text-2xl font-bold text-primary">
+                {(activeTotal - refundedTotal).toFixed(0)} Kč
+              </p>
+            </Card>
           </div>
         )}
       </main>
+
+      {/* Refund Confirmation Dialog */}
+      <Dialog open={refundDialogOpen} onOpenChange={setRefundDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Stornovat účtenku</DialogTitle>
+            <DialogDescription>
+              Opravdu chcete stornovat účtenku v hodnotě{" "}
+              <span className="font-semibold">{receiptToRefund?.total} Kč</span>?
+              Tato akce odešle refund na webhook a nelze ji vrátit zpět.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRefundDialogOpen(false)}
+            >
+              Zrušit
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRefundConfirm}
+              disabled={refundMutation.isPending}
+            >
+              {refundMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <RotateCcw className="h-4 w-4 mr-2" />
+              )}
+              Stornovat
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

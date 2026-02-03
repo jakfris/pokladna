@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CartItem, Product, Receipt } from "@/types/pos";
+import { CartItem, Product, Receipt, PaymentType } from "@/types/pos";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -9,6 +9,7 @@ const WEBHOOK_URL = "https://hook.eu1.make.celonis.com/u521kd500s1y1956s73kj6wak
 export const useCart = () => {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentType, setPaymentType] = useState<PaymentType>("hotovost");
   const queryClient = useQueryClient();
 
   const addItem = (product: Product, quantity: number) => {
@@ -38,6 +39,7 @@ export const useCart = () => {
 
   const clearCart = () => {
     setItems([]);
+    setPaymentType("hotovost");
     toast.info("Účtenka vymazána");
   };
 
@@ -54,6 +56,8 @@ export const useCart = () => {
       })),
       total,
       createdAt: new Date().toISOString(),
+      paymentType,
+      transactionType: "prodej",
     };
 
     setIsSubmitting(true);
@@ -68,6 +72,7 @@ export const useCart = () => {
         .insert({
           user_id: user?.id || null,
           total,
+          payment_type: paymentType,
         })
         .select()
         .single();
@@ -111,10 +116,11 @@ export const useCart = () => {
       console.log("Receipt submitted:", JSON.stringify(receipt, null, 2));
       
       toast.success(`Účtenka uložena!`, {
-        description: `Celkem: ${total} Kč`,
+        description: `Celkem: ${total} Kč (${paymentType === "hotovost" ? "Hotovost" : "Karta"})`,
       });
       
       setItems([]);
+      setPaymentType("hotovost");
     } catch (error) {
       console.error("Error submitting receipt:", error);
       toast.error("Chyba při ukládání účtenky", {
@@ -128,6 +134,8 @@ export const useCart = () => {
   return {
     items,
     isSubmitting,
+    paymentType,
+    setPaymentType,
     addItem,
     removeItem,
     clearCart,
