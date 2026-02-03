@@ -6,6 +6,47 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Validate webhook URL to prevent SSRF attacks
+function isValidWebhookUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    
+    // Only allow HTTPS
+    if (parsed.protocol !== "https:") {
+      return false;
+    }
+    
+    const hostname = parsed.hostname.toLowerCase();
+    
+    // Block localhost and local hostnames
+    if (
+      hostname === "localhost" ||
+      hostname.endsWith(".local") ||
+      hostname.endsWith(".internal") ||
+      hostname === "127.0.0.1" ||
+      hostname === "0.0.0.0"
+    ) {
+      return false;
+    }
+    
+    // Block private IP ranges (IPv4)
+    // 127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16
+    const privateIpPattern = /^(127\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.|169\.254\.)/;
+    if (privateIpPattern.test(hostname)) {
+      return false;
+    }
+    
+    // Block AWS/cloud metadata endpoints
+    if (hostname === "169.254.169.254" || hostname.includes("metadata")) {
+      return false;
+    }
+    
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -103,6 +144,21 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Validate webhook URL to prevent SSRF attacks
+    if (!isValidWebhookUrl(webhookUrl)) {
+      console.error("Invalid webhook URL blocked:", webhookUrl);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Invalid webhook URL. Only HTTPS URLs to public endpoints are allowed." 
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     // Format payload
     const webhookPayload = {
       id: receipt.id,
@@ -120,13 +176,19 @@ Deno.serve(async (req) => {
       }),
     };
 
-    // Send to webhook from server-side
+    // Send to webhook from server-side with timeout
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
       await fetch(webhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(webhookPayload),
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
     } catch (err) {
       console.error("Webhook failed:", err);
       // Don't fail the request if webhook fails - receipt is already saved
