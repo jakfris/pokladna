@@ -29,7 +29,7 @@ const Index = () => {
   const [productListOpen, setProductListOpen] = useState(false);
   const [mobileReceiptOpen, setMobileReceiptOpen] = useState(false);
   
-  const { items, isSubmitting, addItem, removeItem, clearCart, submitReceipt } = useCart();
+  const { items, isSubmitting, paymentType, setPaymentType, addItem, removeItem, clearCart, submitReceipt } = useCart();
 
   const isLoading = favLoading || addLoading;
 
@@ -221,6 +221,8 @@ const Index = () => {
                 onClear={clearCart}
                 onSubmit={submitReceipt}
                 isSubmitting={isSubmitting}
+                paymentType={paymentType}
+                onPaymentTypeChange={setPaymentType}
               />
             </div>
           </div>
@@ -266,6 +268,8 @@ const Index = () => {
                   setMobileReceiptOpen(false);
                 }}
                 isSubmitting={isSubmitting}
+                paymentType={paymentType}
+                onPaymentTypeChange={setPaymentType}
               />
             </div>
           </div>

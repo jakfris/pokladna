@@ -122,18 +122,30 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_refunded: boolean
+          payment_type: Database["public"]["Enums"]["payment_type"]
+          refunded_at: string | null
+          refunded_by: string | null
           total: number
           user_id: string | null
         }
         Insert: {
           created_at?: string
           id?: string
+          is_refunded?: boolean
+          payment_type?: Database["public"]["Enums"]["payment_type"]
+          refunded_at?: string | null
+          refunded_by?: string | null
           total: number
           user_id?: string | null
         }
         Update: {
           created_at?: string
           id?: string
+          is_refunded?: boolean
+          payment_type?: Database["public"]["Enums"]["payment_type"]
+          refunded_at?: string | null
+          refunded_by?: string | null
           total?: number
           user_id?: string | null
         }
@@ -175,6 +187,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user" | "manager"
+      payment_type: "hotovost" | "karta"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -303,6 +316,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user", "manager"],
+      payment_type: ["hotovost", "karta"],
     },
   },
 } as const
