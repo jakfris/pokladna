@@ -2,7 +2,7 @@ import { useState } from "react";
 import { CartItem, Product, Receipt } from "@/types/pos";
 import { toast } from "sonner";
 
-const WEBHOOK_URL = ""; // Configure your webhook URL here
+const WEBHOOK_URL = "https://hook.eu1.make.celonis.com/u521kd500s1y1956s73kj6wak69xkb4o";
 
 export const useCart = () => {
   const [items, setItems] = useState<CartItem[]>([]);

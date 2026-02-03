@@ -39,42 +39,50 @@ const QuantityDialog = ({ product, open, onClose, onConfirm }: QuantityDialogPro
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-center text-xl">{product.name}</DialogTitle>
-          <p className="text-center text-muted-foreground">{product.price} Kč / ks</p>
+      <DialogContent className="sm:max-w-md rounded-2xl">
+        <DialogHeader className="text-center pb-2">
+          <DialogTitle className="text-2xl font-bold">{product.name}</DialogTitle>
+          <p className="text-lg text-muted-foreground">{product.price} Kč / ks</p>
         </DialogHeader>
         
-        <div className="flex items-center justify-center gap-6 py-8">
+        <div className="flex items-center justify-center gap-8 py-10">
           <Button
             variant="outline"
             className="quantity-button"
             onClick={() => setQuantity(Math.max(1, quantity - 1))}
             disabled={quantity <= 1}
           >
-            <Minus className="h-6 w-6" />
+            <Minus className="h-7 w-7" />
           </Button>
           
-          <span className="text-5xl font-bold w-20 text-center">{quantity}</span>
+          <div className="relative">
+            <span className="text-6xl font-bold w-24 text-center block text-foreground">
+              {quantity}
+            </span>
+            <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-sm text-muted-foreground">
+              kusů
+            </span>
+          </div>
           
           <Button
             variant="outline"
             className="quantity-button"
             onClick={() => setQuantity(quantity + 1)}
           >
-            <Plus className="h-6 w-6" />
+            <Plus className="h-7 w-7" />
           </Button>
         </div>
 
-        <div className="text-center py-2">
-          <span className="text-2xl font-semibold">
-            Celkem: {product.price * quantity} Kč
-          </span>
+        <div className="text-center py-4 bg-secondary/50 rounded-xl mx-4">
+          <span className="text-sm text-muted-foreground">Celkem</span>
+          <p className="text-3xl font-bold text-primary">
+            {product.price * quantity} Kč
+          </p>
         </div>
 
-        <DialogFooter className="sm:justify-center">
+        <DialogFooter className="sm:justify-center pt-4">
           <Button
-            className="action-button-success w-full sm:w-auto min-w-[200px]"
+            className="action-button-success w-full sm:w-auto min-w-[220px] py-6"
             onClick={handleConfirm}
           >
             <Check className="h-5 w-5 mr-2" />

@@ -7,7 +7,7 @@ import QuantityDialog from "@/components/QuantityDialog";
 import ProductListDialog from "@/components/ProductListDialog";
 import Receipt from "@/components/Receipt";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, ShoppingCart } from "lucide-react";
+import { MoreHorizontal, ShoppingCart, Zap } from "lucide-react";
 
 const Index = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -32,20 +32,28 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-card border-b shadow-sm sticky top-0 z-10">
+      <header className="header-gradient text-white sticky top-0 z-10 shadow-lg">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-foreground">Pokladna</h1>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
+                <Zap className="h-6 w-6" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold">Pokladna</h1>
+                <p className="text-sm text-white/70">Rychlý prodej</p>
+              </div>
+            </div>
             
             {/* Mobile cart button */}
             <Button
-              variant="outline"
-              className="lg:hidden relative"
+              variant="secondary"
+              className="lg:hidden relative bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-sm"
               onClick={() => setMobileReceiptOpen(true)}
             >
               <ShoppingCart className="h-5 w-5" />
               {itemCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center font-semibold">
+                <span className="absolute -top-2 -right-2 bg-accent text-accent-foreground text-xs rounded-full h-6 w-6 flex items-center justify-center font-bold shadow-lg">
                   {itemCount}
                 </span>
               )}
@@ -59,15 +67,18 @@ const Index = () => {
           {/* Products Section */}
           <div className="lg:col-span-2 space-y-6">
             {/* Main Products */}
-            <section>
-              <h2 className="text-lg font-semibold mb-4 text-foreground">Rychlý výběr</h2>
+            <section className="card-elevated p-6">
+              <div className="flex items-center gap-2 mb-5">
+                <div className="h-1 w-1 rounded-full bg-primary" />
+                <h2 className="text-lg font-bold text-foreground">Rychlý výběr</h2>
+              </div>
               <ProductGrid products={mainProducts} onProductSelect={handleProductSelect} />
             </section>
 
             {/* More Products Button */}
             <Button
               variant="outline"
-              className="w-full h-14 text-lg border-dashed border-2 hover:border-primary hover:bg-secondary transition-all"
+              className="more-button"
               onClick={() => setProductListOpen(true)}
             >
               <MoreHorizontal className="h-5 w-5 mr-2" />
@@ -77,7 +88,7 @@ const Index = () => {
 
           {/* Receipt Section - Desktop */}
           <div className="hidden lg:block">
-            <div className="sticky top-24">
+            <div className="sticky top-24 h-[calc(100vh-8rem)]">
               <Receipt
                 items={items}
                 onRemoveItem={removeItem}
@@ -91,14 +102,15 @@ const Index = () => {
       </main>
 
       {/* Mobile Receipt Bottom Bar */}
-      {items.length > 0 && (
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t shadow-lg p-4">
+      {items.length > 0 && !mobileReceiptOpen && (
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent pt-8">
           <Button
-            className="w-full action-button-success"
+            className="w-full action-button-success shadow-2xl"
             onClick={() => setMobileReceiptOpen(true)}
           >
-            <ShoppingCart className="h-5 w-5 mr-2" />
-            Účtenka ({itemCount} položek) • {total} Kč
+            <ShoppingCart className="h-5 w-5 mr-3" />
+            <span className="flex-1 text-left">Účtenka ({itemCount} položek)</span>
+            <span className="font-bold">{total} Kč</span>
           </Button>
         </div>
       )}
@@ -107,13 +119,17 @@ const Index = () => {
       {mobileReceiptOpen && (
         <div className="lg:hidden fixed inset-0 z-50 bg-background">
           <div className="flex flex-col h-full">
-            <header className="bg-card border-b p-4 flex items-center justify-between">
+            <header className="header-gradient text-white p-4 flex items-center justify-between">
               <h2 className="text-xl font-bold">Účtenka</h2>
-              <Button variant="ghost" onClick={() => setMobileReceiptOpen(false)}>
+              <Button 
+                variant="ghost" 
+                className="text-white hover:bg-white/20"
+                onClick={() => setMobileReceiptOpen(false)}
+              >
                 Zavřít
               </Button>
             </header>
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-hidden p-4">
               <Receipt
                 items={items}
                 onRemoveItem={removeItem}
