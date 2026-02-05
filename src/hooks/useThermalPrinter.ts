@@ -10,6 +10,9 @@ const commands = {
   // Initialize printer
   init: new Uint8Array([ESC, 0x40]),
   
+  // Select character code table - CP1250 (Windows-1250 for Central European)
+  selectCP1250: new Uint8Array([ESC, 0x74, 16]),
+  
   // Text alignment
   alignLeft: new Uint8Array([ESC, 0x61, 0x00]),
   alignCenter: new Uint8Array([ESC, 0x61, 0x01]),
@@ -37,8 +40,48 @@ const commands = {
   beep: new Uint8Array([ESC, 0x42, 0x02, 0x02]),
 };
 
-// Text encoder
-const textEncoder = new TextEncoder();
+// CP1250 character mapping for Czech characters
+const cp1250Map: Record<string, number> = {
+  // Czech specific characters
+  'Á': 0xC1, 'á': 0xE1,
+  'Č': 0xC8, 'č': 0xE8,
+  'Ď': 0xCF, 'ď': 0xEF,
+  'É': 0xC9, 'é': 0xE9,
+  'Ě': 0xCC, 'ě': 0xEC,
+  'Í': 0xCD, 'í': 0xED,
+  'Ň': 0xD2, 'ň': 0xF2,
+  'Ó': 0xD3, 'ó': 0xF3,
+  'Ř': 0xD8, 'ř': 0xF8,
+  'Š': 0xA9, 'š': 0xB9,
+  'Ť': 0xAB, 'ť': 0xBB,
+  'Ú': 0xDA, 'ú': 0xFA,
+  'Ů': 0xD9, 'ů': 0xF9,
+  'Ý': 0xDD, 'ý': 0xFD,
+  'Ž': 0xAE, 'ž': 0xBE,
+  // Special characters for receipt formatting
+  '═': 0xCD,
+  '─': 0xC4,
+};
+
+// Encode text to CP1250 for thermal printer
+const encodeCP1250 = (text: string): Uint8Array => {
+  const bytes: number[] = [];
+  for (const char of text) {
+    if (cp1250Map[char] !== undefined) {
+      bytes.push(cp1250Map[char]);
+    } else {
+      const code = char.charCodeAt(0);
+      // ASCII characters (0-127) pass through directly
+      if (code < 128) {
+        bytes.push(code);
+      } else {
+        // Replace unknown characters with '?'
+        bytes.push(0x3F);
+      }
+    }
+  }
+  return new Uint8Array(bytes);
+};
 
 interface PrinterState {
   isConnected: boolean;
@@ -195,8 +238,8 @@ export const useThermalPrinter = () => {
 
   // Print text
   const printText = useCallback(async (text: string) => {
-    const encoded = textEncoder.encode(text + "\n");
-    await sendData(new Uint8Array(encoded));
+    const encoded = encodeCP1250(text + "\n");
+    await sendData(encoded);
   }, [sendData]);
 
   // Print receipt
@@ -215,6 +258,9 @@ export const useThermalPrinter = () => {
     try {
       // Initialize printer
       await sendData(commands.init);
+      
+      // Select CP1250 code page for Czech characters
+      await sendData(commands.selectCP1250);
       
       // Header
       await sendData(commands.alignCenter);
