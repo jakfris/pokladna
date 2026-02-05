@@ -5,6 +5,7 @@ import { Trash2, Send, Receipt as ReceiptIcon, ShoppingBag, Printer, CreditCard,
 import { useThermalPrinter } from "@/hooks/useThermalPrinter";
 import PrinterButton from "@/components/PrinterButton";
 import { cn } from "@/lib/utils";
+import { useSystemSettings } from "@/hooks/useSystemSettings";
 
 interface ReceiptProps {
   items: CartItem[];
@@ -28,10 +29,14 @@ const Receipt = ({
   const total = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const { isConnected, isPrinting, printReceipt, isSupported } = useThermalPrinter();
+  const { data: systemSettings } = useSystemSettings();
+
+  const receiptHeader = systemSettings?.find(s => s.key === "receipt_header")?.value || "";
+  const receiptFooter = systemSettings?.find(s => s.key === "receipt_footer")?.value || "";
 
   const handlePrint = async () => {
     if (items.length === 0) return;
-    await printReceipt(items, total);
+    await printReceipt(items, total, undefined, receiptHeader, receiptFooter);
   };
 
   const handleSubmitAndPrint = async () => {
@@ -39,7 +44,7 @@ const Receipt = ({
     onSubmit();
     // Then print if connected
     if (isConnected && items.length > 0) {
-      await printReceipt(items, total);
+      await printReceipt(items, total, undefined, receiptHeader, receiptFooter);
     }
   };
 

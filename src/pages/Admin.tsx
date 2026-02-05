@@ -44,8 +44,10 @@ import {
   X,
   Settings,
   Link as LinkIcon,
-  Save
+  Save,
+  Printer
 } from "lucide-react";
+import ReceiptSettingsCard from "@/components/ReceiptSettingsCard";
 import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct } from "@/hooks/useProducts";
 import { useUsers, useUpdateUserProfile, useAddUserRole, useRemoveUserRole } from "@/hooks/useUsers";
 import { useCreateUser } from "@/hooks/useCreateUser";
@@ -619,6 +621,10 @@ const Admin = () => {
               </div>
             ) : (
               <div className="space-y-6">
+                {/* Receipt Settings */}
+                <ReceiptSettingsCard />
+
+                {/* Webhook Settings */}
                 <div className="card-elevated p-6">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
