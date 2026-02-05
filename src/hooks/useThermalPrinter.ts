@@ -250,7 +250,9 @@ export const useThermalPrinter = () => {
   const printReceipt = useCallback(async (
     items: CartItem[],
     total: number,
-    receiptId?: string
+    receiptId?: string,
+    headerText?: string,
+    footerText?: string
   ) => {
     if (!deviceRef.current) {
       const connected = await connect();
@@ -266,11 +268,25 @@ export const useThermalPrinter = () => {
       // Select CP1250 code page for Czech characters
       await sendData(commands.selectCP1250);
       
-      // Header
+      // Header from settings
       await sendData(commands.alignCenter);
-      await sendData(commands.doubleSize);
-      await printText("POKLADNA");
-      await sendData(commands.normalSize);
+      if (headerText) {
+        const headerLines = headerText.split('\n');
+        // First line in double size (company name)
+        if (headerLines.length > 0) {
+          await sendData(commands.doubleSize);
+          await printText(headerLines[0]);
+          await sendData(commands.normalSize);
+        }
+        // Rest of header lines
+        for (let i = 1; i < headerLines.length; i++) {
+          await printText(headerLines[i]);
+        }
+      } else {
+        await sendData(commands.doubleSize);
+        await printText("POKLADNA");
+        await sendData(commands.normalSize);
+      }
       await printText("=".repeat(PAPER_WIDTH));
       
       // Date and receipt ID
@@ -318,10 +334,17 @@ export const useThermalPrinter = () => {
         await printText(`DPH ${rate}%: ${vatAmount.toFixed(2)} Kc`);
       }
       
-      // Footer
+      // Footer from settings
       await printText("-".repeat(PAPER_WIDTH));
       await sendData(commands.alignCenter);
-      await printText("Dekujeme za nakup!");
+      if (footerText) {
+        const footerLines = footerText.split('\n');
+        for (const line of footerLines) {
+          await printText(line);
+        }
+      } else {
+        await printText("Dekujeme za nakup!");
+      }
       await printText("");
       
       // Feed and cut
