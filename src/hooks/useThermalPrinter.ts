@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { CartItem } from "@/types/pos";
 
@@ -103,6 +103,14 @@ const getUSB = (): any => {
   return undefined;
 };
 
+const PRINTER_STORAGE_KEY = "thermal_printer_config";
+
+interface SavedPrinterConfig {
+  vendorId: number;
+  productId: number;
+  productName: string;
+}
+
 export const useThermalPrinter = () => {
   const [state, setState] = useState<PrinterState>({
     isConnected: false,
@@ -114,11 +122,127 @@ export const useThermalPrinter = () => {
   const deviceRef = useRef<any>(null);
   const interfaceNumRef = useRef<number>(0);
   const endpointNumRef = useRef<number>(0);
+  const autoConnectAttemptedRef = useRef(false);
 
   // Check if WebUSB is supported
   const isSupported = typeof navigator !== "undefined" && "usb" in navigator;
 
-  // Connect to printer
+  // Helper to save printer config
+  const savePrinterConfig = useCallback((vendorId: number, productId: number, productName: string) => {
+    const config: SavedPrinterConfig = { vendorId, productId, productName };
+    localStorage.setItem(PRINTER_STORAGE_KEY, JSON.stringify(config));
+  }, []);
+
+  // Helper to get saved printer config
+  const getSavedPrinterConfig = useCallback((): SavedPrinterConfig | null => {
+    try {
+      const saved = localStorage.getItem(PRINTER_STORAGE_KEY);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch {
+      // Invalid config, ignore
+    }
+    return null;
+  }, []);
+
+  // Helper to clear saved printer config
+  const clearPrinterConfig = useCallback(() => {
+    localStorage.removeItem(PRINTER_STORAGE_KEY);
+  }, []);
+
+  // Connect to a specific device (internal helper)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const connectToDevice = useCallback(async (device: any, showToast = true): Promise<boolean> => {
+    try {
+      await device.open();
+      
+      // Find the printer interface and endpoint
+      if (device.configuration === null) {
+        await device.selectConfiguration(1);
+      }
+
+      // Find bulk OUT endpoint
+      let foundInterface = false;
+      for (const iface of device.configuration!.interfaces) {
+        for (const alternate of iface.alternates) {
+          for (const endpoint of alternate.endpoints) {
+            if (endpoint.direction === "out" && endpoint.type === "bulk") {
+              interfaceNumRef.current = iface.interfaceNumber;
+              endpointNumRef.current = endpoint.endpointNumber;
+              foundInterface = true;
+              break;
+            }
+          }
+          if (foundInterface) break;
+        }
+        if (foundInterface) break;
+      }
+
+      if (!foundInterface) {
+        throw new Error("Nebyl nalezen tiskový endpoint");
+      }
+
+      await device.claimInterface(interfaceNumRef.current);
+      
+      deviceRef.current = device;
+      
+      // Save printer config for auto-reconnect
+      savePrinterConfig(device.vendorId, device.productId, device.productName || "USB Tiskárna");
+      
+      setState({
+        isConnected: true,
+        isPrinting: false,
+        printerName: device.productName || "USB Tiskárna",
+      });
+
+      if (showToast) {
+        toast.success("Tiskárna připojena", {
+          description: device.productName || "USB tiskárna připravena",
+        });
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Printer connection error:", error);
+      if (showToast) {
+        toast.error("Chyba připojení tiskárny", {
+          description: (error as Error).message,
+        });
+      }
+      return false;
+    }
+  }, [savePrinterConfig]);
+
+  // Try to auto-connect to previously paired printer
+  const autoConnect = useCallback(async (): Promise<boolean> => {
+    const usb = getUSB();
+    if (!usb) return false;
+
+    const savedConfig = getSavedPrinterConfig();
+    if (!savedConfig) return false;
+
+    try {
+      // Get all previously authorized devices
+      const devices = await usb.getDevices();
+      
+      // Find the saved printer
+      const savedDevice = devices.find(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (d: any) => d.vendorId === savedConfig.vendorId && d.productId === savedConfig.productId
+      );
+
+      if (savedDevice) {
+        return await connectToDevice(savedDevice, false);
+      }
+    } catch (error) {
+      console.error("Auto-connect error:", error);
+    }
+
+    return false;
+  }, [getSavedPrinterConfig, connectToDevice]);
+
+  // Connect to printer (manual selection)
   const connect = useCallback(async () => {
     const usb = getUSB();
     if (!usb) {
@@ -151,48 +275,7 @@ export const useThermalPrinter = () => {
         ],
       });
 
-      await device.open();
-      
-      // Find the printer interface and endpoint
-      if (device.configuration === null) {
-        await device.selectConfiguration(1);
-      }
-
-      // Find bulk OUT endpoint
-      let foundInterface = false;
-      for (const iface of device.configuration!.interfaces) {
-        for (const alternate of iface.alternates) {
-          for (const endpoint of alternate.endpoints) {
-            if (endpoint.direction === "out" && endpoint.type === "bulk") {
-              interfaceNumRef.current = iface.interfaceNumber;
-              endpointNumRef.current = endpoint.endpointNumber;
-              foundInterface = true;
-              break;
-            }
-          }
-          if (foundInterface) break;
-        }
-        if (foundInterface) break;
-      }
-
-      if (!foundInterface) {
-        throw new Error("Nebyl nalezen tiskový endpoint");
-      }
-
-      await device.claimInterface(interfaceNumRef.current);
-      
-      deviceRef.current = device;
-      setState({
-        isConnected: true,
-        isPrinting: false,
-        printerName: device.productName || "USB Tiskárna",
-      });
-
-      toast.success("Tiskárna připojena", {
-        description: device.productName || "USB tiskárna připravena",
-      });
-
-      return true;
+      return await connectToDevice(device, true);
     } catch (error) {
       console.error("Printer connection error:", error);
       
@@ -206,7 +289,7 @@ export const useThermalPrinter = () => {
       });
       return false;
     }
-  }, []);
+  }, [connectToDevice]);
 
   // Disconnect printer
   const disconnect = useCallback(async () => {
@@ -220,6 +303,9 @@ export const useThermalPrinter = () => {
       deviceRef.current = null;
     }
     
+    // Clear saved config when manually disconnecting
+    clearPrinterConfig();
+    
     setState({
       isConnected: false,
       isPrinting: false,
@@ -227,7 +313,19 @@ export const useThermalPrinter = () => {
     });
     
     toast.info("Tiskárna odpojena");
-  }, []);
+  }, [clearPrinterConfig]);
+
+  // Auto-connect on mount
+  useEffect(() => {
+    if (isSupported && !autoConnectAttemptedRef.current && !state.isConnected) {
+      autoConnectAttemptedRef.current = true;
+      autoConnect().then((connected) => {
+        if (connected) {
+          console.log("Auto-connected to saved printer");
+        }
+      });
+    }
+  }, [isSupported, autoConnect, state.isConnected]);
 
   // Send data to printer
   const sendData = useCallback(async (data: Uint8Array) => {
