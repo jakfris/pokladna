@@ -40,6 +40,10 @@ const commands = {
   beep: new Uint8Array([ESC, 0x42, 0x02, 0x02]),
 };
 
+// Paper width constants for 58mm paper (Epson TM-T88V)
+const PAPER_WIDTH = 32; // characters per line for 58mm paper
+const ITEM_NAME_WIDTH = 18; // max chars for item name
+
 // CP1250 character mapping for Czech characters
 const cp1250Map: Record<string, number> = {
   // Czech specific characters
@@ -267,40 +271,41 @@ export const useThermalPrinter = () => {
       await sendData(commands.doubleSize);
       await printText("POKLADNA");
       await sendData(commands.normalSize);
-      await sendData(commands.lineSpacing(50));
-      await printText("═".repeat(24));
+      await printText("=".repeat(PAPER_WIDTH));
       
       // Date and receipt ID
       await sendData(commands.alignLeft);
       const now = new Date();
       await printText(`Datum: ${now.toLocaleDateString("cs-CZ")}`);
-      await printText(`Čas:   ${now.toLocaleTimeString("cs-CZ")}`);
+      await printText(`Cas:   ${now.toLocaleTimeString("cs-CZ")}`);
       if (receiptId) {
-        await printText(`Č.:    ${receiptId}`);
+        await printText(`C.:    ${receiptId}`);
       }
-      await printText("─".repeat(32));
+      await printText("-".repeat(PAPER_WIDTH));
       
       // Items
       for (const item of items) {
-        const name = item.product.name.substring(0, 20).padEnd(20);
-        const qty = `${item.quantity}x`.padStart(4);
-        await printText(`${name}${qty}`);
+        // First line: item name
+        const name = item.product.name.substring(0, ITEM_NAME_WIDTH);
+        const qty = `${item.quantity}x`;
+        const subtotal = `${item.product.price * item.quantity} Kc`;
         
-        const price = `${item.product.price} Kč`.padStart(12);
-        const subtotal = `${item.product.price * item.quantity} Kč`.padStart(12);
-        await printText(`   ${price} = ${subtotal}`);
+        // Format: Name              2x  100 Kc
+        const spacing = PAPER_WIDTH - name.length - qty.length - subtotal.length;
+        const line = name + " ".repeat(Math.max(1, spacing)) + qty + " " + subtotal;
+        await printText(line);
       }
       
       // Total
-      await printText("═".repeat(32));
+      await printText("=".repeat(PAPER_WIDTH));
       await sendData(commands.boldOn);
       await sendData(commands.doubleHeight);
-      await printText(`CELKEM:        ${total} Kč`);
+      await printText(`CELKEM: ${total} Kc`);
       await sendData(commands.normalSize);
       await sendData(commands.boldOff);
       
       // VAT breakdown
-      await printText("─".repeat(32));
+      await printText("-".repeat(PAPER_WIDTH));
       const vatGroups = items.reduce((acc, item) => {
         const rate = item.product.vat_rate;
         const amount = item.product.price * item.quantity;
@@ -310,13 +315,13 @@ export const useThermalPrinter = () => {
       
       for (const [rate, amount] of Object.entries(vatGroups)) {
         const vatAmount = (Number(amount) * Number(rate)) / (100 + Number(rate));
-        await printText(`DPH ${rate}%: ${vatAmount.toFixed(2)} Kč`);
+        await printText(`DPH ${rate}%: ${vatAmount.toFixed(2)} Kc`);
       }
       
       // Footer
-      await printText("─".repeat(32));
+      await printText("-".repeat(PAPER_WIDTH));
       await sendData(commands.alignCenter);
-      await printText("Děkujeme za nákup!");
+      await printText("Dekujeme za nakup!");
       await printText("");
       
       // Feed and cut
