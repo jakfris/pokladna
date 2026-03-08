@@ -52,8 +52,7 @@ serve(async (req: Request): Promise<Response> => {
       JSON.stringify({
         success: true,
         message: "Výchozí administrátor vytvořen",
-        email: "admin@admin.cz",
-        password: "admin",
+        email: "admin@cg.cz",
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
