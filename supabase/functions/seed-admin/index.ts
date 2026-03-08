@@ -18,27 +18,9 @@ serve(async (req: Request): Promise<Response> => {
 
     const adminClient = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-    // Check if any admin already exists
-    const { data: existingAdmins, error: checkError } = await adminClient
-      .from("user_roles")
-      .select("id")
-      .eq("role", "admin")
-      .limit(1);
-
-    if (checkError) {
-      throw checkError;
-    }
-
-    if (existingAdmins && existingAdmins.length > 0) {
-      return new Response(
-        JSON.stringify({ error: "Admin již existuje" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Create the admin user
+    // Create the default admin user
     const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
-      email: "admin@admin.cz",
+      email: "admin@cg.cz",
       password: "admin",
       email_confirm: true,
       user_metadata: {
@@ -70,8 +52,7 @@ serve(async (req: Request): Promise<Response> => {
       JSON.stringify({
         success: true,
         message: "Výchozí administrátor vytvořen",
-        email: "admin@admin.cz",
-        password: "admin",
+        email: "admin@cg.cz",
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
